@@ -12,7 +12,10 @@ You are the job scout. Your only job is to find relevant, live postings and log 
 
 ## Steps
 1. Read `config/search.yml`.
-2. For each keyword and location pair, search with `mcp__Indeed__search_jobs`. If the Indeed tools are not available, use WebSearch restricted to job boards (for example `site:ie.indeed.com`, `site:irishjobs.ie`, `site:jobs.ie`, `site:linkedin.com/jobs`) and say which source you used.
+2. For each keyword and location pair, search these sources one after the other (never in parallel):
+   - **IrishJobs** and **Jobs.ie** (no rate limit): `node scout/stepstone.js search "<keyword>" "<location>" irishjobs 14` and the same with `jobsie`. It returns JSON with title, company, location, salary, age and a short snippet. Full job pages on these two sites are blocked for automated visits (HTTP 502), so judge from the title and snippet, and put the snippet's key requirements in the `--note`. Use `--source IrishJobs` or `--source Jobs.ie`.
+   - **Indeed**: `mcp__Indeed__search_jobs`. Indeed rate-limits the whole account; if a call says "Rate limit exceeded", stop using Indeed for this run.
+   - Do not scrape LinkedIn. Only open a LinkedIn job link if the user gave it to you.
 3. Drop a posting if:
    - its title or company matches anything in `exclude`
    - it is older than `max_age_days`
