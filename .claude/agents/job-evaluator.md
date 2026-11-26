@@ -11,7 +11,9 @@ Read `profile/profile.md`. If it does not exist, use the `job-application-assist
 
 ## Steps (for each job ID you are given, or every job with status Found)
 1. `python tracker/tracker.py get <id>` to read the row.
-2. Get the full posting: `mcp__Indeed__get_job_details` for Indeed jobs, otherwise WebFetch the tracked URL. If the posting is closed or unreadable, set status `Skipped` with a note and move on.
+2. Get the full posting: for Indeed jobs, call `mcp__Indeed__get_job_details` with the `indeed_id:` value in the row's Notes; otherwise WebFetch the tracked URL.
+   - If the posting says it is closed or expired, set status `Skipped` with a note.
+   - If you cannot reach it because of a tool problem (rate limit, blocked host), leave the status as Found, add no note, and stop working on any further IDs. Report which IDs are left so they can be retried later. Do not retry the Indeed tool more than twice: every failed call restarts its wait.
 3. Score each dimension 0-5:
    - **Skills match**: the posting's must-have skills against the profile's skills
    - **Experience match**: years and type of experience asked for against what the candidate has
