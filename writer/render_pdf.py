@@ -198,6 +198,12 @@ def build_classic(spec, out):
     for sec in spec["sections"]:
         head = [Paragraph(t(sec["title"]).upper(), st["h"]),
                 HRFlowable(width="100%", thickness=0.7, color=HexColor("#000000"), spaceBefore=1, spaceAfter=space)]
+        if sec.get("page_break_before"):
+            from reportlab.platypus import PageBreak
+            flow.append(PageBreak())
+        if "paragraph" in sec:
+            flow.append(KeepTogether(head + [Paragraph(t(sec["paragraph"]), st["line"])]))
+            continue
         if "lines" in sec:
             flow.append(KeepTogether(head + [Paragraph(label_line(l), st["line"]) for l in sec["lines"]]))
             continue
@@ -205,12 +211,13 @@ def build_classic(spec, out):
         for e in sec["entries"]:
             block = [row(f"<b>{t(e['org'])}</b>", f"<b>{t(e.get('location', ''))}</b>")]
             if e.get("title") or e.get("dates"):
-                block.append(row(f"<i>{t(e.get('title', ''))}</i>", f"<i>{t(e.get('dates', ''))}</i>", 0.78))
+                block.append(row(f"<i>{t(e.get('title', ''))}</i>", f"<i>{t(e.get('dates', ''))}</i>", 0.7))
             if e.get("bullets"):
                 block.append(ListFlowable(
                     [ListItem(Paragraph(t(b), st["bullet"]), leftIndent=12, value="•") for b in e["bullets"]],
                     bulletType="bullet", start="•", leftIndent=12, bulletFontSize=size - 1.5))
             block.append(Spacer(1, space * 1.6))
+            flow.append(CondPageBreak(30 * mm))  # never strand a heading at the foot of a page
             flow.append(KeepTogether((head if first else []) + block))
             first = False
     doc = SimpleDocTemplate(out, pagesize=A4, leftMargin=margin, rightMargin=margin,
