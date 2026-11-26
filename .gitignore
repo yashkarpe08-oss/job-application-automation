@@ -1,0 +1,12 @@
+# Personal data. This repository is public, so these stay out of git.
+# If you make the repository private, delete these lines to keep your
+# tracker, reports and CVs across cloud sessions.
+data/*.xlsx
+profile/profile.md
+reports/*.md
+output/
+
+__pycache__/
+.pytest_cache/
+~$*.xlsx
+data/*.lock

@@ -1,0 +1,28 @@
+# What the job-scout agent searches for. Edit freely.
+keywords:            # in priority order
+  - financial analyst
+  - compliance analyst
+  - internal audit
+  - audit associate
+  - fintech operations
+  - risk analyst
+  - accounts assistant
+  - accounts payable
+  - accounts receivable
+  - finance administrator
+locations:
+  - Galway
+  - Dublin
+  - Cork
+  - Limerick
+  - Ireland          # catches remote and other towns
+exclude:             # skip postings whose title or company contains any of these
+  - senior manager
+  - director
+  - head of
+  - payroll specialist
+  - "10+ years"
+max_age_days: 14
+max_new_per_run: 20
+apply_threshold: 3.5  # fit score (0-5) needed for "Ready to Apply"
+follow_up_days: 7     # also set FOLLOW_UP_DAYS for the tracker script
