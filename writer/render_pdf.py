@@ -144,8 +144,83 @@ def build_letter(spec, out):
     doc.build(flow)
 
 
+SERIF_DIR = "/usr/share/fonts/truetype/liberation"
+
+
+def register_serif():
+    """Times-metric serif (Liberation Serif); falls back to built-in Times."""
+    try:
+        from reportlab.pdfbase.pdfmetrics import registerFontFamily
+        for name, f in (("Serif", "Regular"), ("Serif-Bold", "Bold"), ("Serif-Italic", "Italic"),
+                        ("Serif-BoldItalic", "BoldItalic")):
+            pdfmetrics.registerFont(TTFont(name, f"{SERIF_DIR}/LiberationSerif-{f}.ttf"))
+        registerFontFamily("Serif", normal="Serif", bold="Serif-Bold", italic="Serif-Italic",
+                           boldItalic="Serif-BoldItalic")
+        return "Serif", "Serif-Bold", "Serif-Italic"
+    except Exception:
+        return "Times-Roman", "Times-Bold", "Times-Italic"
+
+
+def build_classic(spec, out):
+    """Classic US banking/finance resume layout (the style of Ivy League
+    career-office templates): serif type, centred name, ALL-CAPS section
+    headings over a full-width rule, firm + location then title + dates on
+    two-column rows, tight bullets. Single text layer, ATS-safe.
+
+    Entries: {"org", "location", "title", "dates", "bullets": [..]}
+    Line sections: {"title", "lines": ["Label: text", ...]}
+    """
+    reg, bold, ital = register_serif()
+    size = spec.get("font_size", 10.5)
+    space = spec.get("space", 2.5)
+    lead = size * 1.18
+    margin = spec.get("margin_in", 0.6) * 72
+    width = A4[0] - 2 * margin
+    P = lambda name, **kw: ParagraphStyle(name, **{"fontName": reg, "fontSize": size, "leading": lead, **kw})
+    st = {
+        "name": P("name", fontName=bold, fontSize=size + 7, leading=size + 10, alignment=TA_CENTER),
+        "contact": P("contact", alignment=TA_CENTER),
+        "h": P("h", fontName=bold, spaceBefore=space * 2.4, spaceAfter=0),
+        "l": P("l"), "r": P("r", alignment=2),
+        "bullet": P("bullet"),
+        "line": P("line", spaceAfter=space * 0.4),
+    }
+
+    def row(left, right, split=0.7):
+        tbl = Table([[Paragraph(left, st["l"]), Paragraph(right, st["r"])]],
+                    colWidths=[width * split, width * (1 - split)])
+        tbl.setStyle(TableStyle([(k, (0, 0), (-1, -1), 0) for k in
+                                 ("LEFTPADDING", "RIGHTPADDING", "TOPPADDING", "BOTTOMPADDING")]))
+        return tbl
+
+    flow = [Paragraph(t(spec["name"]).upper(), st["name"]),
+            Paragraph(" • ".join(t(c) for c in spec["contact"]), st["contact"])]
+    for sec in spec["sections"]:
+        head = [Paragraph(t(sec["title"]).upper(), st["h"]),
+                HRFlowable(width="100%", thickness=0.7, color=HexColor("#000000"), spaceBefore=1, spaceAfter=space)]
+        if "lines" in sec:
+            flow.append(KeepTogether(head + [Paragraph(label_line(l), st["line"]) for l in sec["lines"]]))
+            continue
+        first = True
+        for e in sec["entries"]:
+            block = [row(f"<b>{t(e['org'])}</b>", f"<b>{t(e.get('location', ''))}</b>")]
+            if e.get("title") or e.get("dates"):
+                block.append(row(f"<i>{t(e.get('title', ''))}</i>", f"<i>{t(e.get('dates', ''))}</i>", 0.78))
+            if e.get("bullets"):
+                block.append(ListFlowable(
+                    [ListItem(Paragraph(t(b), st["bullet"]), leftIndent=12, value="•") for b in e["bullets"]],
+                    bulletType="bullet", start="•", leftIndent=12, bulletFontSize=size - 1.5))
+            block.append(Spacer(1, space * 1.6))
+            flow.append(KeepTogether((head if first else []) + block))
+            first = False
+    doc = SimpleDocTemplate(out, pagesize=A4, leftMargin=margin, rightMargin=margin,
+                            topMargin=margin * 0.85, bottomMargin=margin * 0.85,
+                            title=f"{spec['name']} CV", author=spec["name"])
+    doc.build(flow)
+
+
 if __name__ == "__main__":
     kind, spec_path, out = sys.argv[1:4]
     spec = json.load(open(spec_path, encoding="utf-8"))
-    (build_cv if kind == "cv" else build_letter)(spec, out)
+    {"cv": build_cv, "classic": build_classic, "letter": build_letter}[kind](spec, out)
     print(out)
