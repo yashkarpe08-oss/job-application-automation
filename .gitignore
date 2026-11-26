@@ -9,3 +9,4 @@ output/
 __pycache__/
 .pytest_cache/
 ~$*.xlsx
+data/*.lock

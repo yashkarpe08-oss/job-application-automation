@@ -12,6 +12,7 @@ The workbook has two sheets:
 from __future__ import annotations
 
 import argparse
+import fcntl
 import json
 import os
 import sys
@@ -463,7 +464,16 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv=None):
     args = build_parser().parse_args(argv)
-    args.func(args)
+    # Agents run in parallel; hold an exclusive lock for the whole
+    # read-modify-write so concurrent updates are never lost.
+    args.path.parent.mkdir(parents=True, exist_ok=True)
+    lock_path = args.path.with_name(args.path.name + ".lock")
+    with open(lock_path, "w") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        try:
+            args.func(args)
+        finally:
+            fcntl.flock(lock, fcntl.LOCK_UN)
 
 
 if __name__ == "__main__":

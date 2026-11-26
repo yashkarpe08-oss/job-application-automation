@@ -69,3 +69,16 @@ def test_workbook_structure(wb_path, capsys):
     assert [c.value for c in ws[1]] == tracker.HEADERS
     assert ws.data_validations.dataValidation
     assert str(wb["Dashboard"]["B4"].value).startswith("=COUNTIF(")
+
+
+def test_parallel_adds_are_not_lost(wb_path):
+    import subprocess
+    script = Path(__file__).resolve().parent.parent / "tracker" / "tracker.py"
+    subprocess.run([sys.executable, str(script), "--path", str(wb_path), "init"], check=True)
+    procs = [subprocess.Popen([sys.executable, str(script), "--path", str(wb_path), "add",
+                               "--company", f"Co{i}", "--role", "Analyst"], stdout=subprocess.DEVNULL)
+             for i in range(12)]
+    assert all(p.wait() == 0 for p in procs)
+    ws = load_workbook(wb_path)["Applications"]
+    ids = sorted(ws.cell(row=r, column=1).value for r in range(2, ws.max_row + 1))
+    assert ids == list(range(1, 13))
